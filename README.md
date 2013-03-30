@@ -1,4 +1,4 @@
 lsr
 ===
 
-Laser resonator and stability.
+Laser resonator and stability. Visualisation.
