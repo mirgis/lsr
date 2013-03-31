@@ -2,8 +2,8 @@
 % Project:   FYO - Laser resonator and stability
 % File:      resonator.m
 % Date:      30.3.2013
-% Author(s): Radek Fér       <xferra00@stud.fit.vutbr.cz>
-%            Miroslav Skácel <xskace00@stud.fit.vutbr.cz>
+% Author(s): Radek FÃ©r       <xferra00@stud.fit.vutbr.cz>
+%            Miroslav SkÃ¡cel <xskace00@stud.fit.vutbr.cz>
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function varargout = resonator(varargin)
 % RESONATOR M-file for resonator.fig
@@ -84,12 +84,26 @@ set(gca,'ytick',[]);
 
 % Function for stability field initialization
 function stability_init(handles)
-axes(handles.stability);
-x1=0.01:0.01:10; x2=-10:0.01:0.01;
-y1=1./x1; y2=1./x2;
+stability_paint(handles,0.5,0.5);
 
-p=plot(x1,y1,'k', ...
+
+% Function for painting static data
+function stability_paint(handles,x,y)
+axes(handles.stability);
+% f(x)=1/x, splitted to 2 subfunctions
+x1=0.333:0.01:3.0;
+x2=-3.0:0.01:-0.33;
+y1=1./x1;
+y2=1./x2;
+
+ p3=fill([0,0,x1,3],[0,3,y1,0],[0.61 0.61 0.99], ...
+         [-3,x2,0,0],[0,y2,-3,0],[0.61 0.61 0.99]);   % background
+
+set(p3,'EdgeColor','None');
+hold on;
+p1=plot(x1,y1,'k', ...              % points and border lines
     x2,y2,'k', ...
+    -1:0.01:1,-1:0.01:1,':r', ...
     -3:0.01:3,0,'k', ...
     0,-3:0.01:3,'k', ...
     1,1,'--ro', ...
@@ -99,13 +113,17 @@ p=plot(x1,y1,'k', ...
     -1,0,'--ro', ...
     2,1/3,'--ro', ...
     'LineWidth',1, ...
-    'MarkerEdgeColor','r','MarkerFaceColor','r','MarkerSize',5);
+    'MarkerEdgeColor','r','MarkerFaceColor','r','MarkerSize',4);
+p2=plot(x,y,'--xb','LineWidth',2,'MarkerSize',8);   % pointing cross
+hold off;
+
 text(2.55,-0.25,'g1','Color','k');
 text(-0.45,2.75,'g2','Color','k');
 axis([-3 3 -3 3]);
-
 set(gca,'ButtonDownFcn',{@getGs,handles});
-set(p,'ButtonDownFcn',{@getGs,handles});
+set(p1,'ButtonDownFcn',{@getGs,handles});
+set(p2,'ButtonDownFcn',{@getGs,handles});
+set(p3,'ButtonDownFcn',{@getGs,handles});
 set(handles.textL,'String',['L = ' num2str(get(handles.sliderL,'value'))]);
 
 
@@ -118,6 +136,7 @@ axis([-1 1 -1 1]);
 % Function to get g1,g2 values by clicking a stability graph
 function getGs(src,evt,h)
 ps=get(gca,'CurrentPoint');
+stability_paint(h,ps(1),ps(4));
 n=1000;
 set(h.textG1,'String',['g1 = ' num2str(round(n*ps(1))/n)]);
 set(h.textG2,'String',['g2 = ' num2str(round(n*ps(4))/n)]);
@@ -144,17 +163,17 @@ function help_content_Callback(hObject, eventdata, handles)
 % hObject    handle to help_content (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-msgbox('Obsah nápovìdy','Nápovìda');
+msgbox('Obsah nÃ¡povÄ›dy','NÃ¡povÄ›da');
 
 % --------------------------------------------------------------------
 function about_Callback(hObject, eventdata, handles)
 % hObject    handle to about (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-msgbox({'Fyzikální optika 2012/2013 - Laserový rezonátor'
+msgbox({'FyzikÃ¡lnÃ­ optika 2012/2013 - LaserovÃ½ rezonÃ¡tor'
         ''
-        'Autoøi: Radek Fér <xferra00@stud.fit.vutbr.cz>'
-        '           Miroslav Skácel <xskace00@stud.fit.vutbr.cz>'}, ...
+        'AutoÅ™i: Radek FÃ©r <xferra00@stud.fit.vutbr.cz>'
+        '           Miroslav SkÃ¡cel <xskace00@stud.fit.vutbr.cz>'}, ...
         'O programu');
 
 % --- Executes on sliderL movement.
