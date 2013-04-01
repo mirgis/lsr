@@ -58,11 +58,12 @@ function resonator_OpeningFcn(hObject, eventdata, handles, varargin)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to resonator (see VARARGIN)
-
+global img;
 % init
 resonator_paint(handles);
 stability_paint(handles);
 energy_paint(handles);
+img=imread('stability.png');
 
 % Choose default command line output for resonator
 handles.output = hObject;
@@ -76,81 +77,69 @@ guidata(hObject, handles);
 % Function for painting static data
 function resonator_paint(handles)
 axes(handles.resonator);
+
 PI=3.1415926535;
+
 L=get(handles.sliderL,'value'); % mirrors distance
 r1=str2double(get(handles.editR1,'String')); % M1 radius
 r2=str2double(get(handles.editR2,'String')); % M2 radius
-t1=-PI:0.001:0; % M1 arc base
-t2=0:0.001:PI;  % M2 arc base
+t1=-PI:0.0001:0; % M1 arc base
+t2=0:0.0001:PI;  % M2 arc base
 x1=sin(t1);
 y1=cos(t1);
 x2=sin(t2);
 y2=cos(t2);
-thr1=min(r1/3,0.95); % rendering arc threshold
-thr2=min(r2/3,0.95); % rendering arc threshold
-xx=x1((r1*y1>-thr1)&(r1*y1<thr1)); % M1 x arc trim
-yy=y1((r1*y1>-thr1)&(r1*y1<thr1)); % M1 y arc trim
-xxx=x2((r2*y2>-thr2)&(r2*y2<thr2));% M2 x arc trim 
-yyy=y2((r2*y2>-thr2)&(r2*y2<thr2));% M2 y arc trim
-plot(r1*xx+r1-L/2,r1*yy,'b','LineWidth',2,'Color','g');
-hold on;
-plot(r1/2-L/2,0,'xb');
-line([r1*xx(1)+r1-L/2, r1-L/2],[r1*(yy(1)), 0],'LineStyle',':');
-line([r1*xx(end)+r1-L/2, r1-L/2],[r1*(yy(end)), 0],'LineStyle',':');
 
-plot(r2*xxx-r2+L/2,r2*yyy,'b','LineWidth',2);
-plot(-r2/2+L/2,0,'xb');
-line([r2*xxx(1)-r2+L/2, -r2+L/2],[r2*(yyy(1)), 0],'LineStyle',':');
-line([r2*xxx(end)-r2+L/2, -r2+L/2],[r2*(yyy(end)), 0],'LineStyle',':');
-line([-100,100],[0,0],'LineStyle',':','Color','k');
-axis([min(-3,min(r1*xx+r1-L/2-1)) max(3,max(r2*xxx-r2+L/2+1)) -r1/2 r1/2]);
-%axis([-3 3 -3 3]);
+thr=min(min(abs(r1/3),abs(r2/3)),0.63); % rendering arc threshold
+
+xx=x1((r1*y1>-thr)&(r1*y1<thr)); % M1 x arc trim
+yy=y1((r1*y1>-thr)&(r1*y1<thr)); % M1 y arc trim
+
+xxx=x2((r2*y2>-thr)&(r2*y2<thr));% M2 x arc trim 
+yyy=y2((r2*y2>-thr)&(r2*y2<thr));% M2 y arc trim
+
+plot(r1*xx+r1-L/2,r1*yy,'b','LineWidth',2,'Color','g'); % M1 mirror
+hold on; axis equal;
+plot(r1/2-L/2,0,'xg'); % M1 focus
+if(r1>0) % M1 concave
+ line([r1*xx(1)+r1-L/2, r1-L/2],[r1*(yy(1)), 0],'LineStyle',':');
+ line([r1*xx(end)+r1-L/2, r1-L/2],[r1*(yy(end)), 0],'LineStyle',':');
+else     % M1 convex
+ line([r1*xx(1)+r1-L/2, -r1-L/2],[r1*(yy(1)), 2*r1*(yy(1))],'LineStyle',':');
+ line([r1*xx(end)+r1-L/2, -r1-L/2],[r1*(yy(end)), 2*r1*(yy(end))],'LineStyle',':');    
+end
+
+plot(r2*xxx-r2+L/2,r2*yyy,'b','LineWidth',2); % M2 mirror
+plot(-r2/2+L/2,0,'xb'); % M2 focus
+if(r2>0) % M2 concave 
+ line([r2*xxx(1)-r2+L/2, -r2+L/2],[r2*(yyy(1)), 0],'LineStyle',':');
+ line([r2*xxx(end)-r2+L/2, -r2+L/2],[r2*(yyy(end)), 0],'LineStyle',':');
+else     % M2 convex
+ line([r2*xxx(1)-r2+L/2, r2+L/2],[r2*(yyy(1)),2*r2*(yyy(1))],'LineStyle',':');
+ line([r2*xxx(end)-r2+L/2, r2+L/2],[r2*(yyy(end)), 2*r2*(yyy(end))],'LineStyle',':');   
+end
+line([-100,100],[0,0],'LineStyle',':','Color','k'); % optical axis
+axis([min(-2,min(1.1*(r1*xx+r1-L/2))) max(2,max(1.1*(r2*xxx-r2+L/2))) ... % axis constraint
+      min(-0.7,-1.1*thr) max(0.7,1.1*thr)]);
 hold off;
-%set(gca,'xtick',[]);
-%set(gca,'ytick',[]);
 
 
 % Function for painting static data
 function stability_paint(handles)
+global img;
 axes(handles.stability);
-% f(x)=1/x, splitted to 2 subfunctions
 x=str2double(get(handles.editG1,'String'));
 y=str2double(get(handles.editG2,'String'));
-% stability function
-x1=0.333:0.01:3.04;
-y1=1./x1;
-x2=-3.0:0.01:-0.33;
-y2=1./x2;
-% filled area
-p3=fill([0,0,x1,3],[0,3,y1,0],[0.61 0.61 0.99], ...
-        [-3,x2,0,0],[0,y2,-3,0],[0.61 0.61 0.99]);   % background color
-set(p3,'EdgeColor','None'); % no border
-hold on;
-p1=plot(x1,y1,'k', ...              % border
-    x2,y2,'k', ...                  % border
-    -1:0.01:1,-1:0.01:1,':r', ...   % dotted line
-    -3:0.01:3,0,'k', ...            % x-axis
-    0,-3:0.01:3,'k', ...            % y-axis
-    1,1,'--ro', ...                 
-    0,0,'--ro', ...
-    0,1,'--ro', ...
-    -1,-1,'--ro', ...
-    -1,0,'--ro', ...
-    2,1/3,'--ro', ...
-    'LineWidth',1, ...
-    'MarkerEdgeColor','r','MarkerFaceColor','r','MarkerSize',4);
-p2=plot(x,y,'--xb','LineWidth',2,'MarkerSize',8);   % pointing cross
+i=imagesc([-3 3], [3 -3], img);
+hold on; axis xy;
+p=plot(x,y,'--xb','LineWidth',2,'MarkerSize',8);   % pointing cross
 hold off;
-% labels
-text(2.55,-0.25,'g1','Color','k');
-text(-0.45,2.75,'g2','Color','k');
 % axis constraints
 axis([-3 3 -3 3]);
 % mouse click handlers (for all graphics elements)
 set(gca,'ButtonDownFcn',{@setGs,handles});
-set(p1,'ButtonDownFcn',{@setGs,handles});
-set(p2,'ButtonDownFcn',{@setGs,handles});
-set(p3,'ButtonDownFcn',{@setGs,handles});
+set(p,'ButtonDownFcn',{@setGs,handles});
+set(i,'ButtonDownFcn',{@setGs,handles});
 
 
 % Function to set g1,g2 values by clicking a stability graph
@@ -247,7 +236,11 @@ function editG1_Callback(hObject, eventdata, handles)
 %        str2double(get(hObject,'String')) returns contents of editG1 as a double
 n=1000;
 L=get(handles.sliderL,'value');
-g1=str2num(get(handles.editG1,'String'));
+g1=str2double(get(handles.editG1,'String'));
+if(g1==1) %
+g1=0.998;
+set(handles.editG1,'String',g1);
+end
 set(handles.editR1,'String',num2str(round(n*L/(1-g1))/n));
 resonator_paint(handles);
 stability_paint(handles);
@@ -275,6 +268,10 @@ function editG2_Callback(hObject, eventdata, handles)
 n=1000;
 L=get(handles.sliderL,'value');
 g2=str2num(get(handles.editG2,'String'));
+if(g2==1) %
+g2=0.998;
+set(handles.editG2,'String',g2);
+end
 set(handles.editR2,'String',num2str(round(n*L/(1-g2))/n));
 resonator_paint(handles);
 stability_paint(handles);
@@ -299,7 +296,15 @@ function editL_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of editL as text
 %        str2double(get(hObject,'String')) returns contents of editL as a double
-
+n = 1000; % round constant
+L = str2double(get(hObject,'String'));
+set(handles.sliderL,'value',L);
+r1=str2double(get(handles.editR1,'String'));
+r2=str2double(get(handles.editR2,'String'));
+set(handles.editG1,'String',num2str(round(n*(1-(L/r1)))/n));
+set(handles.editG2,'String',num2str(round(n*(1-(L/r2)))/n));
+resonator_paint(handles);
+stability_paint(handles);
 
 % --- Executes during object creation, after setting all properties.
 function editL_CreateFcn(hObject, eventdata, handles)
