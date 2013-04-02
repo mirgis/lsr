@@ -29,7 +29,7 @@ function varargout = resonator(varargin)
 
 % Edit the above text to modify the response to help resonator
 
-% Last Modified by GUIDE v2.5 31-Mar-2013 23:22:54
+% Last Modified by GUIDE v2.5 02-Apr-2013 22:40:41
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -60,10 +60,10 @@ function resonator_OpeningFcn(hObject, eventdata, handles, varargin)
 % varargin   command line arguments to resonator (see VARARGIN)
 global img;
 % init
+img=imread('stability.png');
 resonator_paint(handles);
 stability_paint(handles);
 energy_paint(handles);
-img=imread('stability.png');
 
 % Choose default command line output for resonator
 handles.output = hObject;
@@ -123,6 +123,47 @@ axis([min(-2,min(1.1*(r1*xx+r1-L/2))) max(2,max(1.1*(r2*xxx-r2+L/2))) ... % axis
       min(-0.7,-1.1*thr) max(0.7,1.1*thr)]);
 hold off;
 
+% Update stable/unstable
+g1 = str2double(get(handles.editG1, 'String'));
+g2 = str2double(get(handles.editG2, 'String'));
+if g1*g2 >= 0 && g1*g2 <= 1
+    set(handles.text15, 'String', 'Stable');
+    set(handles.text15, 'BackgroundColor', [0 1. 0]);
+else
+    set(handles.text15, 'String', 'Unstable');
+    set(handles.text15, 'BackgroundColor', [1. 0 0]);
+end
+
+% Graphical stability interpretation using circles with half radii
+if get(handles.checkbox1, 'Value')
+    hold on;
+    circle(r1/2-L/2,0,r1/2, 'g');
+    circle(-r2/2+L/2,0,r2/2, 'b');
+
+    % Compute the intersection of these two circles and draw line
+    % at w_0 if there is real solution
+    syms X Y R1 R2 X1 X2;
+    R1 = r1/2;
+    R2 = r2/2;
+    X1 = r1/2-L/2;
+    Y1 = 0;
+    Y2 = 0;
+    X2 = -r2/2+L/2;
+    circle1 = (X-X1)^2 + (Y-Y1)^2 - R1^2;
+    circle2 = (X-X2)^2 + (Y-Y2)^2 - R2^2;
+    S=solve([circle1, circle2], 'Real', true);
+    if (~isempty(S))
+        if length(S.X) == 2
+            line(eval(S.X), eval(S.Y), 'LineWidth', 2, 'LineStyle', '--');
+            eval(S.X)
+            eval(S.Y)
+        end
+    end
+    hold off;
+
+end
+
+
 
 % Function for painting static data
 function stability_paint(handles)
@@ -161,7 +202,6 @@ stability_paint(handles);
 function energy_paint(handles)
 axes(handles.energy);
 axis([-1 1 -1 1]);
-
 
 % --- Outputs from this function are returned to the command line.
 function varargout = resonator_OutputFcn(hObject, eventdata, handles) 
@@ -372,4 +412,22 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
+function circle(x,y,r, color)
+%x and y are the coordinates of the center of the circle
+%r is the radius of the circle
+%0.01 is the angle step, bigger values will draw the circle faster but
+%you might notice imperfections (not very smooth)
+ang=0:0.01:2*pi; 
+xp=r*cos(ang);
+yp=r*sin(ang);
+plot(x+xp,y+yp, 'Color', color, 'LineStyle', '--');
 
+
+% --- Executes on button press in checkbox1.
+function checkbox1_Callback(hObject, eventdata, handles)
+% hObject    handle to checkbox1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of checkbox1
+resonator_paint(handles);
