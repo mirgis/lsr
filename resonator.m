@@ -29,7 +29,7 @@ function varargout = resonator(varargin)
 
 % Edit the above text to modify the response to help resonator
 
-% Last Modified by GUIDE v2.5 02-Apr-2013 22:40:41
+% Last Modified by GUIDE v2.5 03-Apr-2013 00:24:17
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -151,6 +151,7 @@ if get(handles.checkbox1, 'Value')
     X2 = -r2/2+L/2;
     circle1 = (X-X1)^2 + (Y-Y1)^2 - R1^2;
     circle2 = (X-X2)^2 + (Y-Y2)^2 - R2^2;
+    [circle1, circle2]
     S=solve([circle1, circle2], 'Real', true);
     if (~isempty(S))
         if length(S.X) == 2
@@ -431,3 +432,158 @@ function checkbox1_Callback(hObject, eventdata, handles)
 
 % Hint: get(hObject,'Value') returns toggle state of checkbox1
 resonator_paint(handles);
+
+
+% --- Executes on button press in anim.
+function anim_Callback(hObject, eventdata, handles)
+% hObject    handle to anim (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global stop;
+axes(handles.resonator);
+stop=false;
+PI=3.1415926535;
+
+L=get(handles.sliderL,'value'); % mirrors distance
+r1=str2double(get(handles.editR1,'String')); % M1 radius
+r2=str2double(get(handles.editR2,'String')); % M2 radius
+t1=-PI:0.0001:0; % M1 arc base
+t2=0:0.0001:PI;  % M2 arc base
+x1=sin(t1);
+y1=cos(t1);
+x2=sin(t2);
+y2=cos(t2);
+
+thr=min(min(abs(r1/3),abs(r2/3)),0.63); % rendering arc threshold
+
+xx=x1((r1*y1>-thr)&(r1*y1<thr)); % M1 x arc trim
+yy=y1((r1*y1>-thr)&(r1*y1<thr)); % M1 y arc trim
+
+xxx=x2((r2*y2>-thr)&(r2*y2<thr));% M2 x arc trim 
+yyy=y2((r2*y2>-thr)&(r2*y2<thr));% M2 y arc trim
+
+x=[0 0 0 0 0 0 0 0];    % start positions
+y=[0 0 0 0 0 0 0 0];
+
+dl1=round(length(xx)/3);
+dl2=round(length(xxx)/3);
+
+nn1=abs(round(1250/r1));
+nn2=abs(round(1250/r2));
+
+xo=[r1*xx(nn1)+r1-L/2 ...
+    r1*xx(dl1)+r1-L/2 ...
+    r1*xx(2*dl1)+r1-L/2 ...
+    r1*xx(end-nn1)+r1-L/2 ...
+    r2*xxx(nn2)-r2+L/2 ...
+    r2*xxx(dl2)-r2+L/2 ...
+    r2*xxx(2*dl2)-r2+L/2 ...    
+    r2*xxx(end-nn2)-r2+L/2
+    ];   % offset
+yo=[r1*(yy(nn1)) ...
+    r1*(yy(dl1)) ...
+    r1*(yy(2*dl1)) ...
+    r1*(yy(end-nn1))...
+    r2*(yyy(nn2))...
+    r2*(yyy(dl2)) ...
+    r2*(yyy(2*dl2))...    
+    r2*(yyy(end-nn2))
+    ];
+
+phi=[atan((-r1*(yy(nn1)))/(r1-L/2-(r1*xx(nn1)+r1-L/2))) ...
+     atan((-r1*(yy(dl1)))/(r1-L/2-(r1*xx(dl1)+r1-L/2)))...
+     atan((-r1*(yy(2*dl1)))/(r1-L/2-(r1*xx(dl1)+r1-L/2)))...
+     atan((-r1*(yy(end-nn1)))/(r1-L/2-(r1*xx(end-nn1)+r1-L/2))) ...
+     PI+atan((-r2*(yyy(nn2)))/(-r2+L/2-(r2*xxx(nn2)-r2+L/2))) ...
+     PI+atan((-r2*(yyy(dl2)))/(-r2+L/2-(r2*xxx(dl2)-r2+L/2))) ...
+     PI+atan((-r2*(yyy(2*dl2)))/(-r2+L/2-(r2*xxx(2*dl2)-r2+L/2))) ...
+     PI+atan((-r2*(yyy(end-nn2)))/(-r2+L/2-(r2*xxx(end-nn2)-r2+L/2)))     
+     ];
+
+dx=cos(phi).*.7;
+dy=sin(phi).*.7;
+
+step=0.15;
+k = [0 0 0 0 0 0 0 0];
+refl=[0 0 0 0 0 0 0 0];
+
+
+while(true)
+%for s=1:1:300    
+    if(stop)
+        break;
+    end
+plot(r1*xx+r1-L/2,r1*yy,'b','LineWidth',2,'Color','g'); % M1 mirror
+hold on; axis equal;
+plot(r1/2-L/2,0,'xg'); % M1 focus
+if(r1>0) % M1 concave
+ line([r1*xx(1)+r1-L/2, r1-L/2],[r1*(yy(1)), 0],'LineStyle',':');
+ line([r1*xx(end)+r1-L/2, r1-L/2],[r1*(yy(end)), 0],'LineStyle',':');
+else     % M1 convex
+ line([r1*xx(1)+r1-L/2, -r1-L/2],[r1*(yy(1)), 2*r1*(yy(1))],'LineStyle',':');
+ line([r1*xx(end)+r1-L/2, -r1-L/2],[r1*(yy(end)), 2*r1*(yy(end))],'LineStyle',':');    
+end
+
+plot(r2*xxx-r2+L/2,r2*yyy,'b','LineWidth',2); % M2 mirror
+plot(-r2/2+L/2,0,'xb'); % M2 focus
+if(r2>0) % M2 concave 
+ line([r2*xxx(1)-r2+L/2, -r2+L/2],[r2*(yyy(1)), 0],'LineStyle',':');
+ line([r2*xxx(end)-r2+L/2, -r2+L/2],[r2*(yyy(end)), 0],'LineStyle',':');
+else     % M2 convex
+ line([r2*xxx(1)-r2+L/2, r2+L/2],[r2*(yyy(1)),2*r2*(yyy(1))],'LineStyle',':');
+ line([r2*xxx(end)-r2+L/2, r2+L/2],[r2*(yyy(end)), 2*r2*(yyy(end))],'LineStyle',':');   
+end
+line([-100,100],[0,0],'LineStyle',':','Color','k'); % optical axis
+  
+	dx=cos(phi).*.7;
+	dy=sin(phi).*.7;
+
+	x=x+step*dx;
+	y=y+step*dy;
+
+    for i=1:length(x)
+        if(dx(i)>0)
+            Mx = xxx(round(nn2*r2*yyy)/nn2==round(nn2*(yo(i)+y(i)+dy(i)))/nn2);
+            refl(i)=inf;
+            if(~isempty(Mx))
+                refl(i)=L*Mx(1);
+            end
+            k(i)=-((-(yo(i)+y(i)+dy(i)))/(xo(i)+x(i)+dx(i)+(r2-L/2)));
+            quiver(xo(i)+x(i),yo(i)+y(i),dx(i),dy(i));
+            if(xo(i)+x(i)+dx(i)+L/2 > refl(i))
+                axs=atan(k(i));
+                phi(i)=(axs+(PI-phi(i)))+axs;
+                x(i)=x(i)+dx(i);
+                y(i)=y(i)+dy(i);
+            end
+        else
+            Mx = xx(round(nn1*r1*yy)/nn1==round(nn1*(yo(i)+y(i)+dy(i)))/nn1);
+            refl(i)=-inf;
+            if(~isempty(Mx))
+                refl(i)=(r1-L/2)*Mx(1)+r1-L/2;
+            end
+            k(i)=-((-(yo(i)+y(i)+dy(i)))/(xo(i)+x(i)+dx(i)-(r1-L/2)));
+            quiver(xo(i)+x(i),yo(i)+y(i),dx(i),dy(i));
+            if(xo(i)+x(i)+dx(i)+L/2 < refl(i))
+                axs=atan(k(i));
+                phi(i)=(axs+(PI-phi(i)))+axs;
+                x(i)=x(i)+dx(i);
+                y(i)=y(i)+dy(i);
+            end
+        end
+    end
+   
+    axis([min(-2,min(1.1*(r1*xx+r1-L/2))) max(2,max(1.1*(r2*xxx-r2+L/2))) ... % axis constraint
+      min(-0.7,-1.1*thr) max(0.7,1.1*thr)]);
+    hold off;
+    pause(0.01);
+end
+
+% --- Executes on button press in stop.
+function stop_Callback(hObject, eventdata, handles)
+% hObject    handle to stop (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global stop;
+stop=true;
+
