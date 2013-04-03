@@ -29,7 +29,7 @@ function varargout = resonator(varargin)
 
 % Edit the above text to modify the response to help resonator
 
-% Last Modified by GUIDE v2.5 03-Apr-2013 00:24:17
+% Last Modified by GUIDE v2.5 03-Apr-2013 02:26:35
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
