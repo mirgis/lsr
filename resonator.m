@@ -29,7 +29,7 @@ function varargout = resonator(varargin)
 
 % Edit the above text to modify the response to help resonator
 
-% Last Modified by GUIDE v2.5 02-Apr-2013 22:40:41
+% Last Modified by GUIDE v2.5 03-Apr-2013 00:10:16
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -126,7 +126,8 @@ hold off;
 % Update stable/unstable
 g1 = str2double(get(handles.editG1, 'String'));
 g2 = str2double(get(handles.editG2, 'String'));
-if g1*g2 >= 0 && g1*g2 <= 1
+stable = g1*g2 >= 0 && g1*g2 <= 1;
+if stable
     set(handles.text15, 'String', 'Stable');
     set(handles.text15, 'BackgroundColor', [0 1. 0]);
 else
@@ -135,39 +136,48 @@ else
 end
 
 % Graphical stability interpretation using circles with half radii
+global waist;
 if get(handles.checkbox1, 'Value')
     hold on;
     circle(r1/2-L/2,0,r1/2, 'g');
     circle(-r2/2+L/2,0,r2/2, 'b');
-
-    % Compute the intersection of these two circles and draw line
-    % at w_0 if there is real solution
-    syms X Y R1 R2 X1 X2;
-    R1 = r1/2;
-    R2 = r2/2;
-    X1 = r1/2-L/2;
-    Y1 = 0;
-    Y2 = 0;
-    X2 = -r2/2+L/2;
-    circle1 = (X-X1)^2 + (Y-Y1)^2 - R1^2;
-    circle2 = (X-X2)^2 + (Y-Y2)^2 - R2^2;
-    S=solve([circle1, circle2], 'Real', true);
-    if (~isempty(S))
-        if length(S.X) == 2
-            line(eval(S.X), eval(S.Y), 'LineWidth', 2, 'LineStyle', '--');
-            eval(S.X)
-            eval(S.Y)
-        end
-    end
     hold off;
 
+    if stable
+        hold on;
+        % Compute the intersection of these two circles and draw line
+        % at w_0 if there is real solution
+        syms X Y R1 R2 X1 X2;
+        R1 = r1/2;
+        R2 = r2/2;
+        X1 = r1/2-L/2;
+        Y1 = 0;
+        Y2 = 0;
+        X2 = -r2/2+L/2;
+        circle1 = (X-X1)^2 + (Y-Y1)^2 - R1^2;
+        circle2 = (X-X2)^2 + (Y-Y2)^2 - R2^2;
+        S=solve([circle1, circle2], 'Real', true);
+        if (~isempty(S))
+            if length(S.X) == 2
+                waist=eval(S.X(1));
+                line(eval(S.X), eval(S.Y), 'LineWidth', 2, 'LineStyle', '--');
+            end
+        end
+        hold off;
+    end
 end
 
-
+% plot position of z for energy computation
+hold on;
+z=get(handles.slider3, 'value');
+line([z z], [-0.2 0.2]);
+hold off;
 
 % Function for painting static data
 function stability_paint(handles)
 global img;
+global waist;
+
 axes(handles.stability);
 x=str2double(get(handles.editG1,'String'));
 y=str2double(get(handles.editG2,'String'));
@@ -196,12 +206,41 @@ set(handles.editR1,'String',num2str(round(n*(L/(1-g1)))/n));
 set(handles.editR2,'String',num2str(round(n*(L/(1-g2)))/n));
 resonator_paint(handles);
 stability_paint(handles);
+energy_paint(handles);
 
 
 % Function for painting static data
 function energy_paint(handles)
 axes(handles.energy);
-axis([-1 1 -1 1]);
+global waist;
+if isempty(waist)
+    waist=0;
+end
+r=[-0.001:0.000001:0.001];
+z=get(handles.slider3, 'value')-waist;
+if z == 0
+    z = 0.00001;
+end
+E0=1;
+g1 = str2double(get(handles.editG1, 'String'));
+g2 = str2double(get(handles.editG2, 'String'));
+if ~(0 <= g1*g2 && 1 >= g1*g2)
+    cla
+    return;
+end
+L = get(handles.sliderL,'value');
+lambda=550*10^-9;
+k=2*pi/lambda;
+raleyigh_range_sq = L^2*g1*g2*(1-g1*g2)/(g1+g2-2*g1*g2)^2;
+R_z = z*(1+(sqrt(raleyigh_range_sq)/z)^2);
+w0_sq = (L*lambda/pi)*sqrt(g1*g2*(1-g1*g2)/(g1+g2-2*g1*g2)^2);
+w_z=sqrt(w0_sq)*sqrt(1+(z/sqrt(raleyigh_range_sq))^2);
+E=E0*(sqrt(w0_sq)/w_z)*exp(-r.^2/w_z^2 - j*k*z - j*k*(r.^2/(2*R_z)) + j*atan(z/sqrt(raleyigh_range_sq)));
+plot(r, abs(E));
+xlabel('Radial distance [m]')
+axis([-0.001 0.001 0 1.2]);
+grid;
+
 
 % --- Outputs from this function are returned to the command line.
 function varargout = resonator_OutputFcn(hObject, eventdata, handles) 
@@ -254,6 +293,7 @@ set(handles.editG1,'String',num2str(round(n*(1-(L/r1)))/n));
 set(handles.editG2,'String',num2str(round(n*(1-(L/r2)))/n));
 resonator_paint(handles);
 stability_paint(handles);
+energy_paint(handles);
 
 % --- Executes during object creation, after setting all properties.
 function sliderL_CreateFcn(hObject, eventdata, handles)
@@ -327,7 +367,6 @@ function editG2_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
 
 function editL_Callback(hObject, eventdata, handles)
 % hObject    handle to editL (see GCBO)
@@ -431,3 +470,27 @@ function checkbox1_Callback(hObject, eventdata, handles)
 
 % Hint: get(hObject,'Value') returns toggle state of checkbox1
 resonator_paint(handles);
+
+
+% --- Executes on slider movement.
+function slider3_Callback(hObject, eventdata, handles)
+% hObject    handle to slider3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'Value') returns position of slider
+%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
+energy_paint(handles);
+resonator_paint(handles);
+
+
+% --- Executes during object creation, after setting all properties.
+function slider3_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to slider3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: slider controls usually have a light gray background.
+if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor',[.9 .9 .9]);
+end
